@@ -1,0 +1,674 @@
+{
+  "info": {
+    "_postman_id": "b2c3d4e5-f6a7-8901-bcde-f12345678901",
+    "name": "Campus Marketplace API",
+    "description": "Tests every route on the campus marketplace API. Run the folder top-to-bottom (or Collection Runner) so Create User / Create Listing can save IDs for later requests.\n\nImport this file plus `Local.postman_environment.json`, select the environment, then start the server from `server/` with `npm run dev`.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:4000" },
+    { "key": "userId", "value": "" },
+    { "key": "userEmail", "value": "" },
+    { "key": "listingId", "value": "" },
+    { "key": "soldListingId", "value": "" },
+    { "key": "removedListingId", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "GET Health",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Health is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('ok is true', () => pm.expect(pm.response.json().ok).to.eql(true));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/health"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Users",
+      "item": [
+        {
+          "name": "Create User",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.set('userEmail', `alex.${Date.now()}@campus.edu`);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Created user', () => pm.response.to.have.status(201));",
+                  "const user = pm.response.json().user;",
+                  "pm.test('User has id, name, email (no password)', () => {",
+                  "  pm.expect(user).to.have.property('id');",
+                  "  pm.expect(user).to.have.property('name', 'Alex Chen');",
+                  "  pm.expect(user).to.have.property('email', pm.collectionVariables.get('userEmail'));",
+                  "  pm.expect(user).to.not.have.property('password');",
+                  "});",
+                  "pm.collectionVariables.set('userId', user.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Alex Chen\",\n  \"email\": \"{{userEmail}}\",\n  \"password\": \"secret12\"\n}"
+            },
+            "url": "{{baseUrl}}/api/users"
+          }
+        },
+        {
+          "name": "Get All Users",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Listed users', () => pm.response.to.have.status(200));",
+                  "pm.test('users is an array', () => pm.expect(pm.response.json().users).to.be.an('array'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/users"
+          }
+        },
+        {
+          "name": "Get User",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Got user', () => pm.response.to.have.status(200));",
+                  "pm.test('Matches saved id', () => {",
+                  "  pm.expect(pm.response.json().user.id).to.eql(pm.collectionVariables.get('userId'));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/users/{{userId}}"
+          }
+        },
+        {
+          "name": "Update User",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Updated user', () => pm.response.to.have.status(200));",
+                  "pm.test('Name changed', () => pm.expect(pm.response.json().user.name).to.eql('Alex C.'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Alex C.\"\n}"
+            },
+            "url": "{{baseUrl}}/api/users/{{userId}}"
+          }
+        },
+        {
+          "name": "Create User - duplicate email",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Duplicate email is 409', () => pm.response.to.have.status(409));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Alex Clone\",\n  \"email\": \"{{userEmail}}\",\n  \"password\": \"secret12\"\n}"
+            },
+            "url": "{{baseUrl}}/api/users"
+          }
+        },
+        {
+          "name": "Create User - invalid body",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Invalid user is 400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"A\",\n  \"email\": \"not-an-email\",\n  \"password\": \"123\"\n}"
+            },
+            "url": "{{baseUrl}}/api/users"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Listings",
+      "item": [
+        {
+          "name": "Create Listing",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Created listing', () => pm.response.to.have.status(201));",
+                  "const listing = pm.response.json().listing;",
+                  "pm.test('Defaults and fields look right', () => {",
+                  "  pm.expect(listing.title).to.eql('Used calculus textbook');",
+                  "  pm.expect(listing.price).to.eql(35);",
+                  "  pm.expect(listing.category).to.eql('textbooks');",
+                  "  pm.expect(listing.condition).to.eql('used');",
+                  "  pm.expect(listing.status).to.eql('active');",
+                  "  pm.expect(listing.seller).to.eql(pm.collectionVariables.get('userId'));",
+                  "});",
+                  "pm.collectionVariables.set('listingId', listing.id);",
+                  "pm.collectionVariables.set('soldListingId', listing.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Used calculus textbook\",\n  \"description\": \"Stewart Calculus, 8th edition\",\n  \"price\": 35,\n  \"category\": \"textbooks\",\n  \"condition\": \"used\",\n  \"seller\": \"{{userId}}\"\n}"
+            },
+            "url": "{{baseUrl}}/api/listings"
+          }
+        },
+        {
+          "name": "Get All Listings",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Listed listings', () => pm.response.to.have.status(200));",
+                  "const listings = pm.response.json().listings;",
+                  "pm.test('listings is an array', () => pm.expect(listings).to.be.an('array'));",
+                  "pm.test('Removed listings are hidden by default', () => {",
+                  "  listings.forEach((l) => pm.expect(l.status).to.not.eql('removed'));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/listings"
+          }
+        },
+        {
+          "name": "Get Listing",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Got listing', () => pm.response.to.have.status(200));",
+                  "pm.test('Matches saved id', () => {",
+                  "  pm.expect(pm.response.json().listing.id).to.eql(pm.collectionVariables.get('listingId'));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/listings/{{listingId}}"
+          }
+        },
+        {
+          "name": "Update Listing",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Updated listing', () => pm.response.to.have.status(200));",
+                  "const listing = pm.response.json().listing;",
+                  "pm.test('Price and description changed', () => {",
+                  "  pm.expect(listing.price).to.eql(28);",
+                  "  pm.expect(listing.description).to.eql('Highlighted, still readable');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"price\": 28,\n  \"description\": \"Highlighted, still readable\"\n}"
+            },
+            "url": "{{baseUrl}}/api/listings/{{listingId}}"
+          }
+        },
+        {
+          "name": "Create Listing - missing title",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Missing title is 400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"price\": 10\n}"
+            },
+            "url": "{{baseUrl}}/api/listings"
+          }
+        },
+        {
+          "name": "Create Listing - negative price",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Negative price is 400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Broken lamp\",\n  \"price\": -5\n}"
+            },
+            "url": "{{baseUrl}}/api/listings"
+          }
+        },
+        {
+          "name": "Create Listing - invalid category",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Invalid category is 400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Mystery item\",\n  \"price\": 5,\n  \"category\": \"spaceships\"\n}"
+            },
+            "url": "{{baseUrl}}/api/listings"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Mark as sold",
+      "item": [
+        {
+          "name": "Mark Listing Sold",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Marked sold', () => pm.response.to.have.status(200));",
+                  "pm.test('status is sold', () => pm.expect(pm.response.json().listing.status).to.eql('sold'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{baseUrl}}/api/listings/{{soldListingId}}/sold"
+          }
+        },
+        {
+          "name": "Update Sold Listing Price (expect 409)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Price lock on sold listing is 409', () => pm.response.to.have.status(409));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"price\": 1\n}"
+            },
+            "url": "{{baseUrl}}/api/listings/{{soldListingId}}"
+          }
+        },
+        {
+          "name": "Update Sold Listing Title (allowed)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Title update on sold listing is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Title changed, status still sold', () => {",
+                  "  const listing = pm.response.json().listing;",
+                  "  pm.expect(listing.title).to.eql('Sold calculus textbook');",
+                  "  pm.expect(listing.status).to.eql('sold');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Sold calculus textbook\"\n}"
+            },
+            "url": "{{baseUrl}}/api/listings/{{soldListingId}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Soft delete",
+      "item": [
+        {
+          "name": "Create Listing To Remove",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Created listing to remove', () => pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set('removedListingId', pm.response.json().listing.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Old desk chair\",\n  \"description\": \"Will be soft-deleted\",\n  \"price\": 15,\n  \"category\": \"furniture\",\n  \"condition\": \"worn\",\n  \"seller\": \"{{userId}}\"\n}"
+            },
+            "url": "{{baseUrl}}/api/listings"
+          }
+        },
+        {
+          "name": "Soft Delete Listing",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Soft delete is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('status is removed, document still returned', () => {",
+                  "  const listing = pm.response.json().listing;",
+                  "  pm.expect(listing.id).to.eql(pm.collectionVariables.get('removedListingId'));",
+                  "  pm.expect(listing.status).to.eql('removed');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{baseUrl}}/api/listings/{{removedListingId}}"
+          }
+        },
+        {
+          "name": "Get Removed Listing (expect 404)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Removed listing is hidden by default', () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/listings/{{removedListingId}}"
+          }
+        },
+        {
+          "name": "Get Removed Listing Include Removed",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Opt-in returns removed listing', () => pm.response.to.have.status(200));",
+                  "pm.test('status is removed', () => pm.expect(pm.response.json().listing.status).to.eql('removed'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/listings/{{removedListingId}}?includeRemoved=true",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "listings", "{{removedListingId}}"],
+              "query": [
+                { "key": "includeRemoved", "value": "true" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get All Listings Include Removed",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Listed with removed', () => pm.response.to.have.status(200));",
+                  "const listings = pm.response.json().listings;",
+                  "const id = pm.collectionVariables.get('removedListingId');",
+                  "pm.test('Removed listing is in the opt-in list', () => {",
+                  "  pm.expect(listings.some((l) => l.id === id && l.status === 'removed')).to.eql(true);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/listings?includeRemoved=true",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "listings"],
+              "query": [
+                { "key": "includeRemoved", "value": "true" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Update Removed Listing (expect 409)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Cannot update removed listing', () => pm.response.to.have.status(409));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Should fail\"\n}"
+            },
+            "url": "{{baseUrl}}/api/listings/{{removedListingId}}"
+          }
+        },
+        {
+          "name": "Mark Removed Listing Sold (expect 409)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Cannot mark removed listing sold', () => pm.response.to.have.status(409));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{baseUrl}}/api/listings/{{removedListingId}}/sold"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Cleanup",
+      "item": [
+        {
+          "name": "Delete User",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Deleted user', () => pm.response.to.have.status(200));",
+                  "pm.test('ok is true', () => pm.expect(pm.response.json().ok).to.eql(true));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{baseUrl}}/api/users/{{userId}}"
+          }
+        },
+        {
+          "name": "Get Deleted User (expect 404)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Deleted user is gone', () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/users/{{userId}}"
+          }
+        }
+      ]
+    }
+  ]
+}
